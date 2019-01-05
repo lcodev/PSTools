@@ -1,0 +1,3 @@
+givenname,surname,initials,name,displayname,samaccountname,userprincipalname,employeeid,title,office,officephone,department,company,emailaddress
+Albert,Einstein,R,"Einstein Albert, R","Einstein Albert, R",einstar1,einstar1@lco.net,12345,Systems Engineer,14-S454,30982,Technology,Microsoft,einstar1@lco.net
+Nicola,Tesla,E,"Tesla Nikola, E","Tesla Nikola, E",teslane1,teslane1@lco.net,54321,Software Engineer,16-N343,40982,Technology,Google,teslane1@lco.net
