@@ -1,4 +1,4 @@
-$connstr = "server=sql-csv;database=inventory;trusted_connection=true"
+$connstr = "server=lco-sql1;database=Inventory;User Id=sa; Password=B33b0p@!"
 
 # Get the server names that need to be added
 $srv_file_path = Read-Host 'enter server list'
