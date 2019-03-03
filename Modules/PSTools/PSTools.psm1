@@ -97,7 +97,11 @@ Function Get-SystemData {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [Alias("Hostname")]
         [string[]]$ComputerName,
+
+        [System.Management.Automation.PSCredential]$Credential,
+
         [string]$ErrorLog,
+
         [switch]$LogErrors
     )
         
@@ -110,7 +114,7 @@ Function Get-SystemData {
         
         foreach ($computer in $ComputerName) {
             Write-Verbose "Querying $computer"
-            $cim = New-CimSession -ComputerName $computer -Credential $admin
+            $cim = New-CimSession -ComputerName $computer -Credential $Credential
         
             # Test for online systems
             try {
@@ -205,7 +209,11 @@ function Get-SystemVolumeData {
             HelpMessage = "Computer name or IP address")]
         [Alias("Hostname")]
         [string[]]$ComputerName,
+
+        [System.Management.Automation.PSCredential]$Credential,
+
         [string]$ErrorLog = $ErrorLogPreference,
+
         [switch]$LogErrors
     )
     
@@ -218,7 +226,7 @@ function Get-SystemVolumeData {
     
         foreach ($computer in $ComputerName) {
             Write-Verbose "Querying $computer"
-            $cim = New-CimSession -ComputerName $computer -Credential $admin
+            $cim = New-CimSession -ComputerName $computer -Credential $Credential
     
             # test for online systens
             try {
@@ -312,7 +320,11 @@ function Get-SystemServiceData {
             HelpMessage = "Computer name or IP address")]
         [Alias("Hostname")]
         [string[]]$ComputerName,
+
+        [System.Management.Automation.PSCredential]$Credential,
+
         [string]$ErrorLog = $ErrorLogPreference,
+
         [switch]$LogErrors
     )
     
@@ -325,7 +337,7 @@ function Get-SystemServiceData {
     
         foreach ($computer in $ComputerName) {
             Write-Verbose "Querying $computer"
-            $cim = New-CimSession -ComputerName $computer -Credential $admin
+            $cim = New-CimSession -ComputerName $computer -Credential $Credential
     
             # Check for online systems
             try {
