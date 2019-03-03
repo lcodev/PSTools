@@ -528,10 +528,12 @@ function Get-RemoteSmbShare {
     param(
         # Parameter help description
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [Alias('Hostname')]
-        [ValidateCount(1, 5)]
         [string[]]$ComputerName,
+
+        [System.Management.Automation.PSCredential]$Credential,
+
         [string]$ErrorLog = 'C:\retry.txt',
+
         [switch]$LogErrors
     )
 
@@ -549,7 +551,9 @@ function Get-RemoteSmbShare {
             # test for online systems
             try {
                 $pass = $true
-                $data = Invoke-Command -ScriptBlock { Get-SmbShare } -ComputerName $computer -ErrorAction Stop
+                $data = Invoke-Command -ScriptBlock { 
+                            Get-SmbShare 
+                        } -ComputerName $computer -Credential $Credential -ErrorAction Stop
             }
             catch {
                 if ($LogErrors) {
