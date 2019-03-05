@@ -38,7 +38,7 @@ function Set-InventoryInDatabase {
 
     PROCESS {
         foreach ($obj in $InputObject) {
-            $query = "UPDATE lco_servers SET
+            $query = "UPDATE servers SET
                        biosserial = '$($obj.BIOSSerial)',
                        manufacturer = '$($obj.Manufacturer)',
                        model = '$($obj.Model)',
@@ -114,12 +114,21 @@ Function Get-SystemData {
         
         foreach ($computer in $ComputerName) {
             Write-Verbose "Querying $computer"
-            $cim = New-CimSession -ComputerName $computer -Credential $Credential
         
             # Test for online systems
             try {
                 $everything_ok = $true
-                $os = Get-CimInstance -ClassName Win32_OperatingSystem -CimSession $cim -ErrorAction Stop
+                
+                # Check if the system being queried is the localsystem
+                if ($computer -ceq 'localhost') {
+                    $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop
+                } else {
+                    if (!($Credential)) {
+                        $Credential = Get-Credential
+                    }
+                    $cim = New-CimSession -ComputerName $computer -Credential $Credential
+                    $os = Get-CimInstance -ClassName Win32_OperatingSystem -CimSession $cim -ErrorAction Stop
+                }
             }
             catch {
                 if ($LogErrors) {
@@ -132,9 +141,17 @@ Function Get-SystemData {
         
             # Systems online. Continue processing
             if ($everything_ok) {
-                $cs = Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $cim
-                $bios = Get-CimInstance -ClassName Win32_BIOS -CimSession $cim
-    
+                
+                # Check for localhost 
+                if ($computer -ceq 'localhost') {
+                    $cs = Get-CimInstance -ClassName Win32_ComputerSystem
+                    $bios = Get-CimInstance -ClassName Win32_BIOS
+                    $computer = $env:COMPUTERNAME
+                } else {
+                    $cs = Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $cim
+                    $bios = Get-CimInstance -ClassName Win32_BIOS -CimSession $cim
+                }
+                
                 # Get total physical memory
                 $totalram = "{0:N2}" -f ($cs.TotalPhysicalMemory / 1GB) + " GB"
         
@@ -161,7 +178,9 @@ Function Get-SystemData {
         
             } # end if-statement
         
-            Remove-CimSession $cim
+            if ($computer -cne $env:COMPUTERNAME) {
+                Remove-CimSession $cim
+            }
         } # end foreach-loop $computer
     
     } # end PROCESS block
@@ -226,14 +245,27 @@ function Get-SystemVolumeData {
     
         foreach ($computer in $ComputerName) {
             Write-Verbose "Querying $computer"
-            $cim = New-CimSession -ComputerName $computer -Credential $Credential
     
             # test for online systens
             try {
                 $passtest = $true
-                # extract only local disk data
-                $data = Get-CimInstance -ClassName Win32_Volume -CimSession $cim -Filter "DriveType = 3" -ErrorAction Stop |
+
+                # Check if the system being queried is the localsystem
+                if ($computer -ceq 'localhost') {
+                    # extract only local disk data
+                    $data = Get-CimInstance -ClassName Win32_Volume -Filter "DriveType = 3" -ErrorAction Stop |
                     Where-Object {$_.Name -notlike '\\?*'}
+                    $computer = $env:COMPUTERNAME
+
+                } else {
+                    if (!($Credential)) {
+                        $Credential = Get-Credential
+                    }
+                    $cim = New-CimSession -ComputerName $computer -Credential $Credential
+                    # extract only local disk data
+                    $data = Get-CimInstance -ClassName Win32_Volume -CimSession $cim -Filter "DriveType = 3" -ErrorAction Stop |
+                        Where-Object {$_.Name -notlike '\\?*'}
+                }
             }
             catch {
                 if ($LogErrors) {
@@ -270,7 +302,9 @@ function Get-SystemVolumeData {
     
             } # end if statement
     
-            Remove-CimSession $cim
+            if ($computer -cne $env:COMPUTERNAME) {
+                Remove-CimSession $cim
+            }
         } # end foreach-loop $computer
     
     } # end PROCESS block
@@ -740,6 +774,60 @@ function Get-iSCSITargetIQN {
         }
     } # end process block
 
+    end {
+        Write-Verbose -Message "Queries completed"
+    }
+
+} # end function
+
+function Get-DiskData {
+    [CmdletBinding()]
+    param (
+        # Parameter help description
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [string[]]
+        $ComputerName,
+
+        [system.management.automation.pscredential]$Credential
+    )
+    
+    begin {
+        Write-Verbose -Message "Starting Get-DiskDrive function"
+    }
+    
+    process {
+        foreach ($computer in $ComputerName) {
+            # Collect disk information
+            if ($computer -ceq 'localhost') {
+                $disks = Get-PhysicalDisk
+                $computer = $env:COMPUTERNAME
+            } else {
+                $disks = Invoke-Command -ScriptBlock {
+                    Get-PhysicalDisk
+                } -ComputerName $computer -Credential $Credential
+            }
+
+            # iterate through each disk
+            foreach ($disk in $disks) {
+                $props = @{
+                    ComputerName        = $computer
+                    DiskModel           = $disk.FriendlyName
+                    DiskSerialNumber    = $disk.SerialNumber
+                }
+
+                # Custom output object
+                $obj = New-Object -TypeName psobject -Property $props
+                Write-Output $obj
+
+            } # end foreach-loop $disks
+
+            # Clear disk data
+            Remove-Variable -Name disks
+
+        } # end foreach-loop $ComputerName
+
+    } # end process block
+    
     end {
         Write-Verbose -Message "Queries completed"
     }
