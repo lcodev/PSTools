@@ -703,6 +703,49 @@ function Get-SystemSoftware {
 
 } # end function
 
+function Get-iSCSITargetIQN {
+    [CmdletBinding()]
+    param (
+        # Parameter help description
+        [Parameter(Mandatory = $true)]
+        [string[]]
+        $ComputerName,
+
+        [System.Management.Automation.PSCredential]$Credential
+    )
+
+    begin {
+        Write-Verbose -Message "Starting Get-iSCSITargetIQN function"
+    }
+    
+    process {
+        foreach ($computer in $ComputerName) {
+            if ($computer -ceq 'localhost') {
+                $iscsi = Get-CimInstance -Namespace root\wmi -ClassName MSiSCSIInitiator_MethodClass
+                $computer = $env:COMPUTERNAME
+            } else {
+                $iscsi = Invoke-Command -ScriptBlock {
+                    Get-CimInstance -Namespace root\wmi -ClassName MSiSCSIInitiator_MethodClass
+                } -ComputerName $computer -Credential $Credential
+            }
+
+            $props = @{
+                ComputerName    = $computer
+                iSCSINodeName   = $iscsi.iSCSINodeName
+            }
+    
+            # custom output object
+            $obj = New-Object -TypeName psobject -Property $props
+            Write-Output $obj
+        }
+    } # end process block
+
+    end {
+        Write-Verbose -Message "Queries completed"
+    }
+
+} # end function
+
 # Export preference variable and all functions
 Export-ModuleMember -Variable ErrorLogPreference
 Export-ModuleMember -Function *-*
