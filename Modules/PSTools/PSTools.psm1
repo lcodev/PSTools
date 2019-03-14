@@ -680,6 +680,8 @@ function Get-SystemSoftware {
         [string[]]
         $ComputerName,
 
+        [System.Management.Automation.PSCredential]$Credential,
+
         [string]$ErrorLog = $ErrorLogPreference,
 
         [switch]$LogErrors
@@ -693,10 +695,21 @@ function Get-SystemSoftware {
     
             try {
                 $pass = $true
-                $apps = Invoke-Command -ScriptBlock {
-                    Get-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
-                        Where-Object {$null -ne $_.DisplayName}
-                } -ComputerName $Computer -Credential $admin -ErrorAction Stop
+                
+                # Check if the system queried is localhost
+                if ($computer -eq $env:COMPUTERNAME -or $computer -eq 'localhost') {
+                    $apps = Get-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
+                    Where-Object {$null -ne $_.DisplayName}
+                    $computer = $env:COMPUTERNAME
+                } else {
+                    if (!($Credential)) {
+                        $Credential = Get-Credential
+                    }
+                    $apps = Invoke-Command -ScriptBlock {
+                        Get-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
+                            Where-Object {$null -ne $_.DisplayName}
+                    } -ComputerName $Computer -Credential $Credential -ErrorAction Stop
+                }
             }
             catch {
                 if ($LogErrors) {
