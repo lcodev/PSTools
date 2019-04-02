@@ -122,7 +122,8 @@ Function Get-SystemData {
                 # Check if the system being queried is the localsystem
                 if ($computer -ceq 'localhost') {
                     $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop
-                } else {
+                }
+                else {
                     if (!($Credential)) {
                         $Credential = Get-Credential
                     }
@@ -147,7 +148,8 @@ Function Get-SystemData {
                     $cs = Get-CimInstance -ClassName Win32_ComputerSystem
                     $bios = Get-CimInstance -ClassName Win32_BIOS
                     $computer = $env:COMPUTERNAME
-                } else {
+                }
+                else {
                     $cs = Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $cim
                     $bios = Get-CimInstance -ClassName Win32_BIOS -CimSession $cim
                 }
@@ -254,17 +256,18 @@ function Get-SystemVolumeData {
                 if ($computer -ceq 'localhost') {
                     # extract only local disk data
                     $data = Get-CimInstance -ClassName Win32_Volume -Filter "DriveType = 3" -ErrorAction Stop |
-                    Where-Object {$_.Name -notlike '\\?*'}
+                    Where-Object { $_.Name -notlike '\\?*' }
                     $computer = $env:COMPUTERNAME
 
-                } else {
+                }
+                else {
                     if (!($Credential)) {
                         $Credential = Get-Credential
                     }
                     $cim = New-CimSession -ComputerName $computer -Credential $Credential
                     # extract only local disk data
                     $data = Get-CimInstance -ClassName Win32_Volume -CimSession $cim -Filter "DriveType = 3" -ErrorAction Stop |
-                        Where-Object {$_.Name -notlike '\\?*'}
+                    Where-Object { $_.Name -notlike '\\?*' }
                 }
             }
             catch {
@@ -598,8 +601,8 @@ function Get-RemoteSmbShare {
             try {
                 $pass = $true
                 $data = Invoke-Command -ScriptBlock { 
-                            Get-SmbShare 
-                        } -ComputerName $computer -Credential $Credential -ErrorAction Stop
+                    Get-SmbShare 
+                } -ComputerName $computer -Credential $Credential -ErrorAction Stop
             }
             catch {
                 if ($LogErrors) {
@@ -699,15 +702,16 @@ function Get-SystemSoftware {
                 # Check if the system queried is localhost
                 if ($computer -eq $env:COMPUTERNAME -or $computer -eq 'localhost') {
                     $apps = Get-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
-                    Where-Object {$null -ne $_.DisplayName}
+                    Where-Object { $null -ne $_.DisplayName }
                     $computer = $env:COMPUTERNAME
-                } else {
+                }
+                else {
                     if (!($Credential)) {
                         $Credential = Get-Credential
                     }
                     $apps = Invoke-Command -ScriptBlock {
                         Get-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
-                            Where-Object {$null -ne $_.DisplayName}
+                        Where-Object { $null -ne $_.DisplayName }
                     } -ComputerName $Computer -Credential $Credential -ErrorAction Stop
                 }
             }
@@ -770,15 +774,16 @@ function Get-iSCSITargetIQN {
             if ($computer -ceq 'localhost') {
                 $iscsi = Get-CimInstance -Namespace root\wmi -ClassName MSiSCSIInitiator_MethodClass
                 $computer = $env:COMPUTERNAME
-            } else {
+            }
+            else {
                 $iscsi = Invoke-Command -ScriptBlock {
                     Get-CimInstance -Namespace root\wmi -ClassName MSiSCSIInitiator_MethodClass
                 } -ComputerName $computer -Credential $Credential
             }
 
             $props = @{
-                ComputerName    = $computer
-                iSCSINodeName   = $iscsi.iSCSINodeName
+                ComputerName  = $computer
+                iSCSINodeName = $iscsi.iSCSINodeName
             }
     
             # custom output object
@@ -801,50 +806,43 @@ function Get-DiskData {
         [string[]]
         $ComputerName,
 
-        [system.management.automation.pscredential]$Credential
+        # Parameter help description
+        [Parameter(Mandatory = $true)]
+        [System.Management.Automation.PSCredential]
+        $Credential
     )
     
     begin {
-        Write-Verbose -Message "Starting Get-DiskDrive function"
     }
     
     process {
-        foreach ($computer in $ComputerName) {
-            # Collect disk information
-            if ($computer -ceq 'localhost') {
-                $disks = Get-PhysicalDisk
-                $computer = $env:COMPUTERNAME
-            } else {
-                $disks = Invoke-Command -ScriptBlock {
-                    Get-PhysicalDisk
-                } -ComputerName $computer -Credential $Credential
+        foreach ($Computer in $ComputerName) {
+            $data = Get-WmiObject -Class Win32_DiskDrive -ComputerName $Computer -Credential $Credential |
+            Select-Object -Property Model, Signature, @{
+                name = 'Size'; expression = { [math]::Round($_.Size / 1GB, 2) }
             }
 
-            # iterate through each disk
-            foreach ($disk in $disks) {
+            foreach ($item in $data) {
                 $props = @{
-                    ComputerName        = $computer
-                    DiskModel           = $disk.FriendlyName
-                    DiskSerialNumber    = $disk.SerialNumber
+                    ComputerName = $Computer 
+                    Model        = $item.Model
+                    Serial       = $item.Signature
+                    SizeGB       = $item.Size
                 }
 
                 # Custom output object
                 $obj = New-Object -TypeName psobject -Property $props
-                Write-Output $obj
+                $obj.psobject.TypeNames.Insert(0, 'LCO.DiskData')
+                Write-Output -InputObject $obj
 
-            } # end foreach-loop $disks
+            } # end foreach-loop $data
 
-            # Clear disk data
-            Remove-Variable -Name disks
+        } # end foreach-loop $Computer
 
-        } # end foreach-loop $ComputerName
-
-    } # end process block
+    } # end PROCESS block 
     
     end {
-        Write-Verbose -Message "Queries completed"
     }
-
 } # end function
 
 # Export preference variable and all functions
