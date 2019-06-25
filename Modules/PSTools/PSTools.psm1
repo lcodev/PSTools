@@ -1,5 +1,5 @@
 $ErrorLogPreference = "D:\FunctionLogs\ErrorLog.txt"
-$ConnectionString = "server=lco-sql1;database=inventory;user id=sa;password=B33b0p@!"
+$ConnectionString = "server=lco-sql;database=inventory;user id=sa;password=B33b0p@!"
 
 Import-Module PSDatabase
 
@@ -14,7 +14,7 @@ function Get-ComputerNamesFromDatabase {
 
     param(
         [Parameter()]
-        [string]$Query = "SELECT computername FROM lco_servers"
+        [string]$Query = "SELECT computername FROM servers"
     )
 
     Get-DatabaseData -ConnectionString $ConnectionString -mssql -query $Query

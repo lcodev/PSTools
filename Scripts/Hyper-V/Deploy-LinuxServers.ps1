@@ -1,5 +1,5 @@
 $vmnum = Read-Host 'number of vms'
-$Centos7 = "E:\Software\Linux\Centos\CentOS-7.iso"
+$Centos7 = "E:\Software\Linux\Centos\centos.iso"
 
 for ($i = 0; $i -lt $vmnum; $i++) {
     # name vm
